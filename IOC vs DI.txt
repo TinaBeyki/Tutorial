@@ -1,0 +1,142 @@
+
+Inversion of Control
+Basic Concepts
+Here is an informal definition of IoC: “IoC is when you have someone else create objects for you.” So instead of writing “new MyObject” in your code, the object is created by someone else. This ‘someone else’ is normally referred to as an IoC container.
+
+This simple explanation illustrates some very important ideas:
+
+It is called IoC because control of the object is inverted. It is not the programmer, but someone else who controls the object.
+IoC is relative in the sense that it only applies to some objects of the application. So there may be IoC for some objects, whereas others are under the direct control of the programmer.
+Apart from Spring, there are other examples of IoC like Java Servlets and Akka Actors.
+
+The Details
+Let’s delve a little more into the definition of IoC. IoC is much more than object creation: a Spring Context or a Servlet Container not only create objects, but manage their entire lifecycle. That includes creating objects, destroying them, and invoking certain methods of the object at different stages of its lifecycle. These methods are often described as callbacks. Notice again the terminology: methods invoked by the container are callbacks, as opposed to the direct calls that programmers make on their own code.
+
+All the IoC containers previously mentioned implement some kind of lifecycle: Spring Bean Lifecycle, Servlet Lifecycle, and Akka Actor Lifecycle.
+
+Another thing to consider is that, although programmers relinquish their control on the objects, they still need to define the templates used by the IoC container to create said objects.
+
+For instance, in Spring, classes are annotated with @Service or @Component (among many others) to indicate that the Spring Container is to manage the instances of those classes (it is also possible to use XML configuration instead of annotations). Spring-managed objects, as you likely know, are called Beans.
+
+In a Servlet application, any class implementing the Servlet interface will be managed by the Servlet Container.
+
+In an Akka application, the IoC container is called ActorSystem and the managed objects are instances of classes extending the trait Actor and created through configuration objects called Props.
+
+Here is a quick summary of the ideas discussed so far:
+
+IoC containers control and manage the lifecycle of some objects: creation, destruction, and callback invocations.
+The programmer must identify the classes whose instances are to be managed by the IoC container. There are several ways to do this: with annotations, by extending some specific classes, using external configuration.
+The programmer can influence, to some extent, the way the objects are managed by the IoC container. Normally, this is achieved by overriding the default behavior of the object callbacks.
+IOC CONTAINER	MANAGED OBJECT NAME	MANAGED OBJECTS DEFINITION
+Spring Container	Bean	Classes defined with annotations/XML configuration
+Servlet Container	Servlet	Classes implementing interface Servlet
+Actor System	Actor	Classes extending trait Actor
+
+
+So far, we have managed to explain IoC without needing to talk about Dependency Injection. 
+
+Dependency Injection
+Dependency Injection has become one of the cornerstones of modern software engineering, as it is fundamental to allow proper testing. To put it simply, having DI is the opposite to having hardcoded dependencies.
+
+//Hardcoded dependency
+public class MyClass { 
+    private MyDependency myDependency = new MyDependency(); 
+}
+//Injected dependency
+public class MyClass { 
+    private MyDependency myDependency;
+    public MyClass(MyDependency myDependency){
+        this.myDependency = myDependency;
+    }
+}
+ 
+
+A dependency can be injected in several ways, like a parameter in the constructor or through a “set” method.
+
+As important as DI is, there is a downside to its use, namely: management of dependencies is inconvenient. Let’s take a look at an example: MyClass1 depends on MyClass2, that in turns depends upon MyClass3:
+
+public class MyClass3 {
+    public void doSomething(){}
+}
+//MyClass2 depends on MyClass3
+public class MyClass2 {
+    private MyClass3 myClass3;
+    public MyClass2(MyClass3 myClass3){
+        this.myClass3 = myClass3;
+    }
+    public void doSomething(){
+        myClass3.doSomething();
+    }
+}
+//MyClass1 depends on MyClass2
+public class MyClass1 {
+    private MyClass2 myClass2;
+    public MyClass1(MyClass2 myClass2){
+        this.myClass2 = myClass2;
+    }
+    public void doSomething(){
+        myClass2.doSomething();
+    }
+}
+public class Main {
+    public static void main(String[] args) {
+        //All dependencies need to be managed by the developer
+        MyClass3 myClass3 = new MyClass3();
+        MyClass2 myClass2 = new MyClass2(myClass3);
+        MyClass1 myClass1 = new MyClass1(myClass2);
+        myClass1.doSomething();
+    }
+}
+ 
+
+Now, let’s assume that further down the line, MyClass2 needs a new dependency: MyClass4. We need to make changes to account for this new dependency:
+
+public class MyClass2 {
+    private MyClass3 myClass3;
+    private MyClass4 myClass4;
+    public MyClass2(MyClass3 myClass3, MyClass4 myClass4){
+        this.myClass3 = myClass3;
+        this.myClass4 = myClass4;
+    }
+    public void doSomething(){
+        myClass3.doSomething();
+        myClass4.doSomething();
+    }
+}
+public class Main {
+    public static void main(String[] args) {
+        MyClass4 myClass4 = new MyClass4();
+        MyClass3 myClass3 = new MyClass3();
+        MyClass2 myClass2 = new MyClass2(myClass3, myClass4);
+        MyClass1 myClass1 = new MyClass1(myClass2);
+        myClass1.doSomething();
+    }
+}
+ 
+
+Although the situation described in this example is not too bad, real-life applications can have hundreds of dependencies scattered all across the codebase whose creation and management would need to be centralized like in the above example.
+
+Inversion of Control and Dependency Injection Playing Together
+We just discussed the issue of managing hundreds of dependencies in a real-life application, possibly with very complicated dependency graphs.
+
+So here is where IoC comes to the rescue. With IoC, the dependencies are managed by the container, and the programmer is relieved of that burden.
+
+Using annotations like @Autowired, the container is asked to inject a dependency where it is needed, and the programmers do not need to create/manage those dependencies by themselves.
+
+public class MyClass1 {
+    @Autowired
+    private MyClass2 myClass2;
+    public void doSomething(){
+        myClass2.doSomething();
+    }
+}
+public class MyClass2 {
+    @Autowired
+    private MyClass3 myClass3;
+    @Autowired
+    private MyClass4 myClass4;
+    public void doSomething(){
+        myClass3.doSomething();
+        myClass4.doSomething();
+    }
+}
